@@ -76,31 +76,108 @@ def ros2_message_publisher(result_jointState: JointState):
 # ==============================================
 # 5. MediaPipe 结果回调：轻量处理+线程安全存队列
 # ==============================================
-# 5.0 处理除了大拇指之外的其他手指
-def process_finger(points, max_angle, min_angle):
-    v_base = np.array(points[1]) - np.array(points[0])  # 基准向量：手腕到掌指关节
-    v_mid = np.array(points[2]) - np.array(points[1])  # 中间向量：掌指关节到近端指间关节
-    v_tip = np.array(points[3]) - np.array(points[0])  # 末端向量：近端指间关节到远端指间关节
+# 处理除了大拇指之外的其他手指（根部弯曲与侧摆）
+def process_base_finger(points, roll_num_1, roll_num_2):
+    v_base = np.array(points[1]) - np.array(points[0])
+    v_flex = np.array(points[2]) - np.array(points[1])
+    v_roll = np.array(points[3]) - np.array(points[0])
+    ####################################
+    n = np.cross(v_base, v_roll)                            # 叉积得到法向量
+    # 向量与法向量的点积 → 计算夹角
+    dot_product = np.dot(v_flex, n)
+    norm_v56 = np.linalg.norm(v_flex)
+    norm_n = np.linalg.norm(n)
+    cos_theta_with_normal = dot_product / (norm_v56 * norm_n)
+    # 向量与平面的夹角 = 90° - 向量与法向量的夹角
+    angle_with_plane_rad = np.pi/2 - np.arccos(np.clip(cos_theta_with_normal, -1, 1))
+    angle_with_plane_deg = np.degrees(angle_with_plane_rad)
+    print(f"向量5->6与A平面的夹角：{angle_with_plane_deg:.2f}°")
 
-    # 计算基准向量与中间向量的夹角
-    cos_angle_mid = np.dot(v_base, v_mid) / (np.linalg.norm(v_base) * np.linalg.norm(v_mid))
-    angle_mid_rad = np.arccos(np.clip(cos_angle_mid, -1, 1))
-    angle_mid_deg = np.degrees(angle_mid_rad)
-
-    # 计算基准向量与末端向量的夹角
-    cos_angle_tip = np.dot(v_base, v_tip) / (np.linalg.norm(v_base) * np.linalg.norm(v_tip))
-    angle_tip_rad = np.arccos(np.clip(cos_angle_tip, -1, 1))
-    angle_tip_deg = np.degrees(angle_tip_rad)
+    # 方法：将v_56投影到A平面 → 减去法向量方向的分量
+    v_56_proj = v_flex - (np.dot(v_flex, n) / np.dot(n, n)) * n
+    # 计算投影后向量与v_05的点积夹角
+    dot_product_proj = np.dot(v_56_proj, v_base)
+    norm_v56_proj = np.linalg.norm(v_56_proj)
+    norm_v05 = np.linalg.norm(v_base)
+    cos_alpha = dot_product_proj / (norm_v56_proj * norm_v05)
+    angle_in_plane_rad = np.arccos(np.clip(cos_alpha, -1, 1))
+    angle_in_plane_deg = np.degrees(angle_in_plane_rad)
+    print(f"向量5->6与向量0->5在A平面上的夹角：{angle_in_plane_deg:.2f}°")
 
     # 将夹角映射到0-255范围（线性映射）
-    mid_val = (max_angle - angle_mid_deg) / (max_angle - min_angle) * 255
-    tip_val = (max_angle - angle_tip_deg) / (max_angle - min_angle) * 255
-
+    flex_val = (85.9 - angle_with_plane_deg) / 85.9 * 255
+    roll_val = np.abs(angle_in_plane_deg - roll_num_1) / roll_num_2 * 255
     # 限制在0-255范围内
-    mid_val = np.maximum(0, np.minimum(255, mid_val))
-    tip_val = np.maximum(0, np.minimum(255, tip_val))
+    flex_val = np.maximum(0, np.minimum(255, flex_val))
+    roll_val = np.maximum(0, np.minimum(255, roll_val))
+    ####################################
 
-    return mid_val, tip_val
+    return flex_val, roll_val
+# 处理除了大拇指之外的其他手指（指尖弯曲）
+def process_edge_finger(points):
+    v_base = np.array(points[1]) - np.array(points[0])
+    v_edge = np.array(points[3]) - np.array(points[2])
+    print(f"v_base: {v_base}")
+    print(f"v_edge: {v_edge}")
+
+    # 计算向量夹角
+    dot_product = np.dot(v_base, v_edge)
+    norm_v_base = np.linalg.norm(v_base)
+    norm_v_edge = np.linalg.norm(v_edge)
+    cos_theta = dot_product / (norm_v_base * norm_v_edge)
+    angle_rad = np.arccos(np.clip(cos_theta, -1, 1))
+    angle_deg = np.degrees(angle_rad)
+    print(f"向量2->3与向量0->1的夹角：{angle_deg:.2f}°")
+
+    # 将夹角映射到0-255范围（线性映射）
+    angle_deg = np.abs(angle_deg - 76.0) / (76.0 - 36.0) * 255.0
+    # 限制在0-255范围内
+    angle_deg = np.maximum(0, np.minimum(255, angle_deg))  
+    print(f"映射后的值：{angle_deg:.2f}")     
+
+    return angle_deg
+
+def process_thumb_finger(points):
+    # 0 -> 0
+    # 1 -> 1
+    # 2 -> 2
+    # 3 -> 3
+    # 4 -> 4
+    # 5 -> 5
+    # 6 -> 9
+    v_01 = np.array(points[1]) - np.array(points[0])
+    v_12 = np.array(points[2]) - np.array(points[1])
+    v_23 = np.array(points[3]) - np.array(points[2])
+    v_34 = np.array(points[4]) - np.array(points[3])
+    v_05 = np.array(points[5]) - np.array(points[0])
+    v_09 = np.array(points[6]) - np.array(points[0])
+
+    # 计算平面A的法向量（通过v_05和v_09的叉积）
+    normal = np.cross(v_05, v_09)
+    # 归一化法向量（非必需，但可减少计算误差）
+    normal = normal / np.linalg.norm(normal) if np.linalg.norm(normal) != 0 else normal
+
+    v_01_proj = v_01 - np.dot(v_01, normal) * normal  # v_01在平面A上的投影
+    v_12_proj = v_12 - np.dot(v_01, normal) * normal  # v_12在平面A上的投影
+    # 计算点积
+    dot_product = np.dot(v_01_proj, v_12_proj)
+    # 计算模长
+    norm1 = np.linalg.norm(v_01_proj)
+    norm2 = np.linalg.norm(v_12_proj)
+    
+    # 计算夹角余弦值（限制在[-1, 1]范围内避免浮点误差）
+    cos_theta = np.clip(dot_product / (norm1 * norm2), -1.0, 1.0)
+    angle = np.degrees(np.arccos(cos_theta))
+    print(f"向量1->2与向量0->1在A平面上的夹角：{angle:.2f}°")
+
+    # 将夹角映射到0-255范围（线性映射）
+    angle = 255 - np.abs(angle - 18.0) / (35.0 - 18.0) * 255.0
+    # 限制在0-255范围内
+    angle = np.maximum(0, np.minimum(255, angle))  
+    print(f"映射后的值：{angle:.2f}")
+
+    return angle
+
 
 # 5.1 处理 HandLandmarkerResult 的结果，转成灵巧手接收的 JointState 消息
 def result_transfer(result: vision.HandLandmarkerResult) -> JointState:
@@ -113,38 +190,89 @@ def result_transfer(result: vision.HandLandmarkerResult) -> JointState:
     joint_state_msg.header.stamp = hand_node.get_clock().now().to_msg()
     joint_state_msg.name = [f"hand_landmark_{i}" for i in range(20)]
 
-    ################ 处理食指结果映射 ################
-    for hand_idx, (hand_world_landmarks, handedness) in enumerate(zip(result.hand_world_landmarks, result.handedness)):
-      # 处理食指
-      ff_finger_points = [
+    for _, (hand_world_landmarks, _) in enumerate(zip(result.hand_world_landmarks, result.handedness)):
+      # 处理食指 根部
+      ff_base_finger_points = [
           [hand_world_landmarks[0].x, hand_world_landmarks[0].y, hand_world_landmarks[0].z],
           [hand_world_landmarks[5].x, hand_world_landmarks[5].y, hand_world_landmarks[5].z],  
           [hand_world_landmarks[6].x, hand_world_landmarks[6].y, hand_world_landmarks[6].z],  
           [hand_world_landmarks[9].x, hand_world_landmarks[9].y, hand_world_landmarks[9].z]]
-      ff_figer_val_1, ff_figer_val_2  = process_finger(ff_finger_points, max_angle=85.9, min_angle=0)
-      # 处理中指
-      mf_finger_points = [
+      ff_figer_val_1 = 255.0
+      ff_figer_val_2 = 10.0
+    #   ff_figer_val_1, ff_figer_val_2  = process_base_finger(points=ff_base_finger_points, roll_num_1=10, roll_num_2=10)
+      # 处理中指 根部
+      mf_base_finger_points = [
           [hand_world_landmarks[0].x, hand_world_landmarks[0].y, hand_world_landmarks[0].z],
           [hand_world_landmarks[9].x, hand_world_landmarks[9].y, hand_world_landmarks[9].z],  
           [hand_world_landmarks[10].x, hand_world_landmarks[10].y, hand_world_landmarks[10].z],
           [hand_world_landmarks[13].x, hand_world_landmarks[13].y, hand_world_landmarks[13].z]]
-      mf_figer_val_1, mf_figer_val_2  = process_finger(mf_finger_points, max_angle=85.9, min_angle=0)      
-      # 处理无名指
-      rf_finger_points = [
+      mf_figer_val_1 = 255.0
+      mf_figer_val_2 = 100.0
+    #   mf_figer_val_1, mf_figer_val_2  = process_base_finger(points=mf_base_finger_points, roll_num_1 = 5, roll_num_2 = 10)      
+      # 处理无名指 根部
+      rf_base_finger_points = [
           [hand_world_landmarks[0].x, hand_world_landmarks[0].y, hand_world_landmarks[0].z],
           [hand_world_landmarks[13].x, hand_world_landmarks[13].y, hand_world_landmarks[13].z],  
           [hand_world_landmarks[14].x, hand_world_landmarks[14].y, hand_world_landmarks[14].z],
           [hand_world_landmarks[17].x, hand_world_landmarks[17].y, hand_world_landmarks[17].z]] 
-      rf_figer_val_1, rf_figer_val_2  = process_finger(rf_finger_points, max_angle=85.9, min_angle=0)  
-      # 处理小指
-      lf_finger_points = [
+      rf_figer_val_1 = 255.0
+      rf_figer_val_2 = 180.0
+    #   rf_figer_val_1, rf_figer_val_2  = process_base_finger(points=rf_base_finger_points, roll_num_1=10, roll_num_2=5)  
+      # 处理小指 根部
+      lf_base_finger_points = [
           [hand_world_landmarks[0].x, hand_world_landmarks[0].y, hand_world_landmarks[0].z],
           [hand_world_landmarks[17].x, hand_world_landmarks[17].y, hand_world_landmarks[17].z],  
           [hand_world_landmarks[18].x, hand_world_landmarks[18].y, hand_world_landmarks[18].z],
           [hand_world_landmarks[13].x, hand_world_landmarks[13].y, hand_world_landmarks[13].z]] 
-      lf_figer_val_1, lf_figer_val_2  = process_finger(lf_finger_points, max_angle=85.9, min_angle=0) 
+      lf_figer_val_1 = 255.0
+      lf_figer_val_2 = 180.0
+    #   lf_figer_val_1, lf_figer_val_2  = process_base_finger(points=lf_base_finger_points, roll_num_1=5, roll_num_2=10) 
+      # 处理食指 指尖
+      ff_edge_finger_points = [
+          [hand_world_landmarks[5].x, hand_world_landmarks[5].y, hand_world_landmarks[5].z],  
+          [hand_world_landmarks[6].x, hand_world_landmarks[6].y, hand_world_landmarks[6].z],  
+          [hand_world_landmarks[7].x, hand_world_landmarks[7].y, hand_world_landmarks[7].z],
+          [hand_world_landmarks[8].x, hand_world_landmarks[8].y, hand_world_landmarks[8].z]]
+      ff_edge_val = 255.0
+    #   ff_edge_val = process_edge_finger(points=ff_edge_finger_points)
+      # 处理中指 指尖
+      mf_edge_finger_points = [
+          [hand_world_landmarks[9].x, hand_world_landmarks[9].y, hand_world_landmarks[9].z],
+          [hand_world_landmarks[10].x, hand_world_landmarks[10].y, hand_world_landmarks[10].z],
+          [hand_world_landmarks[11].x, hand_world_landmarks[11].y, hand_world_landmarks[11].z],
+          [hand_world_landmarks[12].x, hand_world_landmarks[12].y, hand_world_landmarks[12].z]]
+      mf_edge_val = 255.0
+    #   mf_edge_val = process_edge_finger(points=mf_edge_finger_points)
+      # 处理无名指 指尖
+      rf_edge_finger_points = [
+          [hand_world_landmarks[13].x, hand_world_landmarks[13].y, hand_world_landmarks[13].z],
+          [hand_world_landmarks[14].x, hand_world_landmarks[14].y, hand_world_landmarks[14].z],
+          [hand_world_landmarks[15].x, hand_world_landmarks[15].y, hand_world_landmarks[15].z],
+          [hand_world_landmarks[16].x, hand_world_landmarks[16].y, hand_world_landmarks[16].z]]
+      rf_edge_val = 255.0
+    #   rf_edge_val = process_edge_finger(points=rf_edge_finger_points)
+      # 处理小指 指尖
+      lf_edge_finger_points = [
+          [hand_world_landmarks[17].x, hand_world_landmarks[17].y, hand_world_landmarks[17].z],
+          [hand_world_landmarks[18].x, hand_world_landmarks[18].y, hand_world_landmarks[18].z],
+          [hand_world_landmarks[19].x, hand_world_landmarks[19].y, hand_world_landmarks[19].z],
+          [hand_world_landmarks[20].x, hand_world_landmarks[20].y, hand_world_landmarks[20].z]]
+      lf_edge_val = 255.0
+    #   lf_edge_val = process_edge_finger(points=lf_edge_finger_points)
+    # 处理大拇指根部、侧摆、横摆、指尖
+      thumb_finger_points = [
+          [hand_world_landmarks[0].x, hand_world_landmarks[0].y, hand_world_landmarks[0].z],
+          [hand_world_landmarks[1].x, hand_world_landmarks[1].y, hand_world_landmarks[1].z],
+          [hand_world_landmarks[2].x, hand_world_landmarks[2].y, hand_world_landmarks[2].z],
+          [hand_world_landmarks[3].x, hand_world_landmarks[3].y, hand_world_landmarks[3].z],
+          [hand_world_landmarks[4].x, hand_world_landmarks[4].y, hand_world_landmarks[4].z],
+          [hand_world_landmarks[5].x, hand_world_landmarks[5].y, hand_world_landmarks[5].z],
+          [hand_world_landmarks[9].x, hand_world_landmarks[9].y, hand_world_landmarks[9].z]]
+      thumble_base = 255.0
+      thumble_base = process_thumb_finger(thumb_finger_points)
     
-      joint_state_msg.position = [255.0, ff_figer_val_1, mf_figer_val_1, rf_figer_val_1, lf_figer_val_1, 255.0, 10.0, 100.0, 180.0, 240.0, 245.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0]
+    #   joint_state_msg.position = [255.0, ff_figer_val_1, mf_figer_val_1, rf_figer_val_1, lf_figer_val_1, 255.0, 127.0, 127.0, 127.0, 127.0, 245.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0]
+      joint_state_msg.position = [thumble_base, ff_figer_val_1, mf_figer_val_1, rf_figer_val_1, lf_figer_val_1, 255.0, ff_figer_val_2, mf_figer_val_2, rf_figer_val_2, lf_figer_val_2, 245.0, 0.0, 0.0, 0.0, 0.0, 255.0, ff_edge_val, mf_edge_val, rf_edge_val, lf_edge_val]
       joint_state_msg.velocity = [0.0 for _ in range(20)]  # 可选：速度信息，暂不使用
       joint_state_msg.effort = [0.0 for _ in range(20)]
 
