@@ -1,0 +1,52 @@
+hand landmarker result: 
+HandLandmarkerResult(
+    handedness=[[
+        Category(index=0, score=0.9857681393623352, display_name='Right', category_name='Right')
+        ]], 
+    hand_landmarks=[[
+        NormalizedLandmark(x=0.2661605477333069, y=0.9706913232803345, z=6.625650712521747e-07, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.37101784348487854, y=0.9293021559715271, z=-0.034530289471149445, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.4618109464645386, y=0.8488829731941223, z=-0.04982127994298935, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.5204052925109863, y=0.7722941637039185, z=-0.06527432799339294, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.5784183740615845, y=0.7200868129730225, z=-0.08017279952764511, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.4171179533004761, y=0.6693854331970215, z=-0.00981053989380598, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.4680684804916382, y=0.5742840766906738, z=-0.03795579448342323, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.504012405872345, y=0.519446849822998, z=-0.06568200886249542, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.5398749113082886, y=0.46916672587394714, z=-0.0869419127702713, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.36266452074050903, y=0.6373306512832642, z=-0.016547033563256264, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.3883778154850006, y=0.5135771632194519, z=-0.041889823973178864, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.41583719849586487, y=0.43959489464759827, z=-0.06764686107635498, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.4449571371078491, y=0.3745327889919281, z=-0.08728594332933426, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.30723175406455994, y=0.640812873840332, z=-0.030596161261200905, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.3226749002933502, y=0.5202038884162903, z=-0.06019018962979317, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.3485743999481201, y=0.4452064633369446, z=-0.08167999237775803, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.37840795516967773, y=0.3767447769641876, z=-0.09610424935817719, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.24936428666114807, y=0.6722139120101929, z=-0.04870001599192619, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.24859264492988586, y=0.5715040564537048, z=-0.07881538569927216, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.25290584564208984, y=0.49793675541877747, z=-0.09452571719884872, visibility=0.0, presence=0.0), 
+        NormalizedLandmark(x=0.2619105875492096, y=0.4235409200191498, z=-0.10450975596904755, visibility=0.0, presence=0.0)
+        ]], 
+    hand_world_landmarks=[[
+        Landmark(x=-0.03302280977368355, y=0.08956123143434525, z=-0.0038642927538603544, visibility=0.0, presence=0.0), 
+        Landmark(x=0.007784612476825714, y=0.07327085733413696, z=-0.011771918274462223, visibility=0.0, presence=0.0), 
+        Landmark(x=0.0365661196410656, y=0.05599510669708252, z=-0.013367782346904278, visibility=0.0, presence=0.0), 
+        Landmark(x=0.06113189458847046, y=0.03461575508117676, z=-0.018298231065273285, visibility=0.0, presence=0.0), 
+        Landmark(x=0.07896003127098083, y=0.01438257284462452, z=-0.014124387875199318, visibility=0.0, presence=0.0), 
+        Landmark(x=0.026439199224114418, y=0.004831264261156321, z=0.007241624873131514, visibility=0.0, presence=0.0), 
+        Landmark(x=0.041857585310935974, y=-0.01817306876182556, z=-0.004134003538638353, visibility=0.0, presence=0.0), 
+        Landmark(x=0.052983030676841736, y=-0.03161146491765976, z=-0.01581691950559616, visibility=0.0, presence=0.0), 
+        Landmark(x=0.06427402049303055, y=-0.040522634983062744, z=-0.04676010087132454, visibility=0.0, presence=0.0), 
+        Landmark(x=0.0017689840169623494, y=-0.004230518359690905, z=0.00763596361503005, visibility=0.0, presence=0.0), 
+        Landmark(x=0.015022601000964642, y=-0.038965191692113876, z=-0.006671471521258354, visibility=0.0, presence=0.0), 
+        Landmark(x=0.02169473096728325, y=-0.05585329979658127, z=-0.03081575781106949, visibility=0.0, presence=0.0), 
+        Landmark(x=0.03336936980485916, y=-0.07093562930822372, z=-0.05395333468914032, visibility=0.0, presence=0.0), 
+        Landmark(x=-0.01857658103108406, y=-0.006032767239958048, z=-0.0038314051926136017, visibility=0.0, presence=0.0), 
+        Landmark(x=-0.011356010101735592, y=-0.03525586426258087, z=-0.01464182697236538, visibility=0.0, presence=0.0), 
+        Landmark(x=-0.0010617077350616455, y=-0.05333909019827843, z=-0.0320373959839344, visibility=0.0, presence=0.0), 
+        Landmark(x=0.011490234173834324, y=-0.06968531012535095, z=-0.05021258071064949, visibility=0.0, presence=0.0), 
+        Landmark(x=-0.03725471347570419, y=0.003968612290918827, z=-0.014954245649278164, visibility=0.0, presence=0.0), 
+        Landmark(x=-0.03770584240555763, y=-0.01789114624261856, z=-0.019345086067914963, visibility=0.0, presence=0.0), 
+        Landmark(x=-0.03436635434627533, y=-0.04085034504532814, z=-0.02693905308842659, visibility=0.0, presence=0.0), 
+        Landmark(x=-0.0291893407702446, y=-0.05792015790939331, z=-0.04029875621199608, visibility=0.0, presence=0.0)
+        ]]
+    )
