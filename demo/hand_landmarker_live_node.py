@@ -117,8 +117,6 @@ def process_base_finger(points, roll_num_1, roll_num_2):
 def process_edge_finger(points):
     v_base = np.array(points[1]) - np.array(points[0])
     v_edge = np.array(points[3]) - np.array(points[2])
-    print(f"v_base: {v_base}")
-    print(f"v_edge: {v_edge}")
 
     # 计算向量夹角
     dot_product = np.dot(v_base, v_edge)
@@ -136,9 +134,9 @@ def process_edge_finger(points):
     print(f"映射后的值：{angle_deg:.2f}")     
 
     return angle_deg
-
+# 处理大拇指
 def process_thumb_finger(points):
-    # 0 -> 0
+    # 0 -> 0 索引与点对应关系
     # 1 -> 1
     # 2 -> 2
     # 3 -> 3
@@ -153,30 +151,72 @@ def process_thumb_finger(points):
     v_09 = np.array(points[6]) - np.array(points[0])
 
     # 计算平面A的法向量（通过v_05和v_09的叉积）
-    normal = np.cross(v_05, v_09)
+    normal_cross = np.cross(v_05, v_09)
     # 归一化法向量（非必需，但可减少计算误差）
-    normal = normal / np.linalg.norm(normal) if np.linalg.norm(normal) != 0 else normal
+    normal = normal_cross / np.linalg.norm(normal_cross) if np.linalg.norm(normal_cross) != 0 else normal_cross
 
+    # 1、计算大拇指根部(v_01和v_12在A平面上的夹角)
     v_01_proj = v_01 - np.dot(v_01, normal) * normal  # v_01在平面A上的投影
     v_12_proj = v_12 - np.dot(v_01, normal) * normal  # v_12在平面A上的投影
     # 计算点积
-    dot_product = np.dot(v_01_proj, v_12_proj)
+    dot_product_01_02 = np.dot(v_01_proj, v_12_proj)
     # 计算模长
-    norm1 = np.linalg.norm(v_01_proj)
-    norm2 = np.linalg.norm(v_12_proj)
-    
+    norm_v01 = np.linalg.norm(v_01_proj)
+    norm_v02 = np.linalg.norm(v_12_proj)
     # 计算夹角余弦值（限制在[-1, 1]范围内避免浮点误差）
-    cos_theta = np.clip(dot_product / (norm1 * norm2), -1.0, 1.0)
-    angle = np.degrees(np.arccos(cos_theta))
-    print(f"向量1->2与向量0->1在A平面上的夹角：{angle:.2f}°")
-
+    cos_theta = np.clip(dot_product_01_02 / (norm_v01 * norm_v02), -1.0, 1.0)
+    thumb_base = np.degrees(np.arccos(cos_theta))
+    # print(f"向量1->2与向量0->1在A平面上的夹角：{thumb_base:.2f}°")
     # 将夹角映射到0-255范围（线性映射）
-    angle = 255 - np.abs(angle - 18.0) / (35.0 - 18.0) * 255.0
+    thumb_base = 255 - np.abs(thumb_base - 18.0) / (30.0 - 18.0) * 255.0   # TODO:根据实际情况调整映射范围
     # 限制在0-255范围内
-    angle = np.maximum(0, np.minimum(255, angle))  
-    print(f"映射后的值：{angle:.2f}")
+    thumb_base = np.maximum(0, np.minimum(255, thumb_base))  
+    # print(f"映射后的值：{thumb_base:.2f}")
 
-    return angle
+    # 2、计算大拇指侧摆(v_01和v_05平面上的夹角)
+    v_05_proj = v_05 - np.dot(v_01, normal) * normal  # v_05在平面A上的投影
+    dot_product_01_05 = np.dot(v_01_proj, v_05_proj)
+    norm_v05 = np.linalg.norm(v_05_proj)
+    cos_theta_01_05 = np.clip(dot_product_01_05 / (norm_v01 * norm_v05), -1.0, 1.0)
+    angle_01_05 = np.degrees(np.arccos(cos_theta_01_05))
+    # print(f"向量0->5与向量0->1在A平面上的夹角：{angle_01_05:.2f}°")
+    # 将夹角映射到0-255范围（线性映射）
+    thumb_side = 255 - np.abs(angle_01_05 - 30.0) / (37 - 30.0) * 255.0   # TODO:根据实际情况调整映射范围（算法识别非常不准确）
+    # 限制在0-255范围内
+    thumb_side = np.maximum(0, np.minimum(255, thumb_side))  
+    # print(f"映射后的值：{thumb_side:.2f}")
+
+    # 3、计算大拇指横摆
+    dot_product_v_n = np.dot(v_01, normal_cross)
+    cos_theta_01_A = dot_product_v_n / (np.linalg.norm(v_01) * np.linalg.norm(normal_cross))
+    rad = np.pi/2 - np.arccos(np.clip(cos_theta_01_A, -1.0, 1.0))
+    angle_01_A = np.degrees(rad)
+    # print(f"向量0->1与平面A的夹角：{angle_01_A:.2f}°")
+    # 将夹角映射到0-255范围（线性映射）
+    thumb_roll = 255 - np.abs(angle_01_A - 14.0) / (16.0 - 14.0) * 255.0   # TODO:根据实际情况调整映射范围
+    # 限制在0-255范围内
+    thumb_roll = np.maximum(0, np.minimum(255, thumb_roll))  
+    # print(f"映射后的值：{thumb_roll:.2f}")    
+
+    # 4、计算大拇指指尖
+    # 计算点积
+    dot_product = np.dot(v_12, v_34)
+    # 计算两个向量的模长
+    norm_v12 = np.linalg.norm(v_12)
+    norm_v34 = np.linalg.norm(v_34)
+    cos_theta = dot_product / (norm_v12 * norm_v34)
+    cos_theta = np.clip(cos_theta, -1.0, 1.0)
+    # 计算弧度并转换为度
+    theta_rad = np.arccos(cos_theta)
+    theta_deg = np.degrees(theta_rad)
+    # print(f"向量2->3与向量3->4的夹角：{theta_deg:.2f}°")
+    # 将夹角映射到0-255范围（线性映射）
+    thumb_tip = 255 - np.abs(theta_deg - 20.0) / (85.0 - 20.0) * 255.0   # TODO:根据实际情况调整映射范围
+    # 限制在0-255范围内
+    thumb_tip = np.maximum(0, np.minimum(255, thumb_tip))
+    # print(f"映射后的值：{thumb_tip:.2f}")
+
+    return thumb_base, thumb_side, thumb_roll, thumb_tip
 
 
 # 5.1 处理 HandLandmarkerResult 的结果，转成灵巧手接收的 JointState 消息
@@ -199,7 +239,7 @@ def result_transfer(result: vision.HandLandmarkerResult) -> JointState:
           [hand_world_landmarks[9].x, hand_world_landmarks[9].y, hand_world_landmarks[9].z]]
       ff_figer_val_1 = 255.0
       ff_figer_val_2 = 10.0
-    #   ff_figer_val_1, ff_figer_val_2  = process_base_finger(points=ff_base_finger_points, roll_num_1=10, roll_num_2=10)
+      ff_figer_val_1, ff_figer_val_2  = process_base_finger(points=ff_base_finger_points, roll_num_1=10, roll_num_2=20)
       # 处理中指 根部
       mf_base_finger_points = [
           [hand_world_landmarks[0].x, hand_world_landmarks[0].y, hand_world_landmarks[0].z],
@@ -208,7 +248,7 @@ def result_transfer(result: vision.HandLandmarkerResult) -> JointState:
           [hand_world_landmarks[13].x, hand_world_landmarks[13].y, hand_world_landmarks[13].z]]
       mf_figer_val_1 = 255.0
       mf_figer_val_2 = 100.0
-    #   mf_figer_val_1, mf_figer_val_2  = process_base_finger(points=mf_base_finger_points, roll_num_1 = 5, roll_num_2 = 10)      
+      mf_figer_val_1, mf_figer_val_2  = process_base_finger(points=mf_base_finger_points, roll_num_1 = 5, roll_num_2 = 20)      
       # 处理无名指 根部
       rf_base_finger_points = [
           [hand_world_landmarks[0].x, hand_world_landmarks[0].y, hand_world_landmarks[0].z],
@@ -217,7 +257,7 @@ def result_transfer(result: vision.HandLandmarkerResult) -> JointState:
           [hand_world_landmarks[17].x, hand_world_landmarks[17].y, hand_world_landmarks[17].z]] 
       rf_figer_val_1 = 255.0
       rf_figer_val_2 = 180.0
-    #   rf_figer_val_1, rf_figer_val_2  = process_base_finger(points=rf_base_finger_points, roll_num_1=10, roll_num_2=5)  
+      rf_figer_val_1, rf_figer_val_2  = process_base_finger(points=rf_base_finger_points, roll_num_1=10, roll_num_2=5)  
       # 处理小指 根部
       lf_base_finger_points = [
           [hand_world_landmarks[0].x, hand_world_landmarks[0].y, hand_world_landmarks[0].z],
@@ -226,7 +266,7 @@ def result_transfer(result: vision.HandLandmarkerResult) -> JointState:
           [hand_world_landmarks[13].x, hand_world_landmarks[13].y, hand_world_landmarks[13].z]] 
       lf_figer_val_1 = 255.0
       lf_figer_val_2 = 180.0
-    #   lf_figer_val_1, lf_figer_val_2  = process_base_finger(points=lf_base_finger_points, roll_num_1=5, roll_num_2=10) 
+      lf_figer_val_1, lf_figer_val_2  = process_base_finger(points=lf_base_finger_points, roll_num_1=5, roll_num_2=10) 
       # 处理食指 指尖
       ff_edge_finger_points = [
           [hand_world_landmarks[5].x, hand_world_landmarks[5].y, hand_world_landmarks[5].z],  
@@ -234,7 +274,7 @@ def result_transfer(result: vision.HandLandmarkerResult) -> JointState:
           [hand_world_landmarks[7].x, hand_world_landmarks[7].y, hand_world_landmarks[7].z],
           [hand_world_landmarks[8].x, hand_world_landmarks[8].y, hand_world_landmarks[8].z]]
       ff_edge_val = 255.0
-    #   ff_edge_val = process_edge_finger(points=ff_edge_finger_points)
+      ff_edge_val = process_edge_finger(points=ff_edge_finger_points)
       # 处理中指 指尖
       mf_edge_finger_points = [
           [hand_world_landmarks[9].x, hand_world_landmarks[9].y, hand_world_landmarks[9].z],
@@ -242,7 +282,7 @@ def result_transfer(result: vision.HandLandmarkerResult) -> JointState:
           [hand_world_landmarks[11].x, hand_world_landmarks[11].y, hand_world_landmarks[11].z],
           [hand_world_landmarks[12].x, hand_world_landmarks[12].y, hand_world_landmarks[12].z]]
       mf_edge_val = 255.0
-    #   mf_edge_val = process_edge_finger(points=mf_edge_finger_points)
+      mf_edge_val = process_edge_finger(points=mf_edge_finger_points)
       # 处理无名指 指尖
       rf_edge_finger_points = [
           [hand_world_landmarks[13].x, hand_world_landmarks[13].y, hand_world_landmarks[13].z],
@@ -250,7 +290,7 @@ def result_transfer(result: vision.HandLandmarkerResult) -> JointState:
           [hand_world_landmarks[15].x, hand_world_landmarks[15].y, hand_world_landmarks[15].z],
           [hand_world_landmarks[16].x, hand_world_landmarks[16].y, hand_world_landmarks[16].z]]
       rf_edge_val = 255.0
-    #   rf_edge_val = process_edge_finger(points=rf_edge_finger_points)
+      rf_edge_val = process_edge_finger(points=rf_edge_finger_points)
       # 处理小指 指尖
       lf_edge_finger_points = [
           [hand_world_landmarks[17].x, hand_world_landmarks[17].y, hand_world_landmarks[17].z],
@@ -258,7 +298,7 @@ def result_transfer(result: vision.HandLandmarkerResult) -> JointState:
           [hand_world_landmarks[19].x, hand_world_landmarks[19].y, hand_world_landmarks[19].z],
           [hand_world_landmarks[20].x, hand_world_landmarks[20].y, hand_world_landmarks[20].z]]
       lf_edge_val = 255.0
-    #   lf_edge_val = process_edge_finger(points=lf_edge_finger_points)
+      lf_edge_val = process_edge_finger(points=lf_edge_finger_points)
     # 处理大拇指根部、侧摆、横摆、指尖
       thumb_finger_points = [
           [hand_world_landmarks[0].x, hand_world_landmarks[0].y, hand_world_landmarks[0].z],
@@ -269,10 +309,10 @@ def result_transfer(result: vision.HandLandmarkerResult) -> JointState:
           [hand_world_landmarks[5].x, hand_world_landmarks[5].y, hand_world_landmarks[5].z],
           [hand_world_landmarks[9].x, hand_world_landmarks[9].y, hand_world_landmarks[9].z]]
       thumble_base = 255.0
-      thumble_base = process_thumb_finger(thumb_finger_points)
+      thumble_base, thumb_side, thumb_roll, thumb_tip = process_thumb_finger(thumb_finger_points)
     
     #   joint_state_msg.position = [255.0, ff_figer_val_1, mf_figer_val_1, rf_figer_val_1, lf_figer_val_1, 255.0, 127.0, 127.0, 127.0, 127.0, 245.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0]
-      joint_state_msg.position = [thumble_base, ff_figer_val_1, mf_figer_val_1, rf_figer_val_1, lf_figer_val_1, 255.0, ff_figer_val_2, mf_figer_val_2, rf_figer_val_2, lf_figer_val_2, 245.0, 0.0, 0.0, 0.0, 0.0, 255.0, ff_edge_val, mf_edge_val, rf_edge_val, lf_edge_val]
+      joint_state_msg.position = [255.0, ff_figer_val_1, mf_figer_val_1, rf_figer_val_1, lf_figer_val_1, 255.0, 10.0, 100.0, 180.0, 240.0, 245.0, 0.0, 0.0, 0.0, 0.0, thumb_tip, ff_edge_val, mf_edge_val, rf_edge_val, lf_edge_val]
       joint_state_msg.velocity = [0.0 for _ in range(20)]  # 可选：速度信息，暂不使用
       joint_state_msg.effort = [0.0 for _ in range(20)]
 
@@ -388,9 +428,9 @@ def main():
         running_mode=vision.RunningMode.LIVE_STREAM,  # 实时流模式（适合摄像头）
         result_callback=mediapipe_result_callback,   # 结果回调函数
         num_hands=2,  # 最多检测2只手（符合常规场景）
-        min_hand_detection_confidence=0.5,  # 检测置信度阈值（过滤误检）
-        min_hand_presence_confidence=0.5,   # 手部存在置信度阈值
-        min_tracking_confidence=0.5         # 跟踪置信度阈值（提升稳定性）
+        min_hand_detection_confidence=0.95,  # 检测置信度阈值（过滤误检）
+        min_hand_presence_confidence=0.95,   # 手部存在置信度阈值
+        min_tracking_confidence=0.95         # 跟踪置信度阈值（提升稳定性）
     )
 
     # 2. 创建检测器（with 语句：自动释放资源，避免泄漏）
@@ -419,6 +459,8 @@ def main():
                 # -------------------------- 7.4.1 读取摄像头帧
                 # ret：是否读取成功；frame：BGR格式帧（OpenCV默认）
                 ret, frame_bgr = cap.read()
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                print(f"=======>>>>>>> 摄像头帧率：{fps:.2f} FPS") 
                 if not ret:
                     hand_node.get_logger().warn("无法读取摄像头帧，重试...")
                     time.sleep(0.1)  # 重试前休眠，避免高频报错
